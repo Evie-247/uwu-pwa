@@ -1,0 +1,539 @@
+/* --- 提醒事项 (Reminder) 样式 --- */
+
+/* 让主背景保持清爽的高级灰 */
+#reminder-screen {
+    background: #f5f5f7; 
+}
+
+#reminder-screen .reminder-content-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+#reminder-screen .app-header {
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid #eee;
+    padding: 10px 16px;
+    padding-top: max(10px, env(safe-area-inset-top));
+    flex-shrink: 0;
+}
+
+#reminder-screen .app-header .title {
+    font-size: 17px;
+    font-weight: 600;
+}
+
+/* === 1. 横向滑动日历带 === */
+.compact-calendar {
+    background: #fff;
+    padding: 10px 0 16px;
+    border-bottom-left-radius: 24px;
+    border-bottom-right-radius: 24px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.03); /* 柔和的底部阴影 */
+    z-index: 10;
+}
+
+.calendar-header-mini {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px 12px;
+}
+
+.calendar-header-mini .month-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1c1c1e;
+}
+
+.calendar-header-mini .cal-nav-btn {
+    background: none;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #666;
+    transition: background 0.2s;
+}
+
+.calendar-header-mini .cal-nav-btn:hover {
+    background: #f0f0f0;
+}
+
+.calendar-header-mini .cal-nav-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+.calendar-strip {
+    display: flex;
+    overflow-x: auto;
+    padding: 0 16px;
+    gap: 12px;
+    scroll-behavior: smooth;
+    /* 隐藏滚动条让视觉更干净 */
+    scrollbar-width: none; 
+}
+.calendar-strip::-webkit-scrollbar {
+    display: none;
+}
+
+/* 修改原有 JS 生成的日历天数样式 */
+.calendar-day {
+    flex-shrink: 0;
+    width: 50px;
+    height: 66px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    background: #f5f5f7;
+    color: #8e8e93;
+    font-size: 16px;
+    transition: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    cursor: pointer;
+    position: relative;
+    gap: 2px;
+}
+
+.calendar-day:hover { background: #eaeaec; }
+
+/* 选中的日期突出显示 (OVO 蓝) */
+.calendar-day.selected {
+    background: var(--primary-color); 
+    color: var(--white-color, #fff);
+    box-shadow: 0 4px 14px rgba(206, 228, 241, 0.4);
+    transform: scale(1.05); /* 点击时轻微放大 */
+    font-weight: 600;
+}
+
+.calendar-day.today {
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.calendar-day.selected.today {
+    color: #fff;
+}
+
+.calendar-day .day-dots {
+    display: flex;
+    gap: 3px;
+    height: 5px;
+    align-items: center;
+}
+
+.calendar-day .day-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.calendar-day .day-dot.dot-user {
+    background: #007aff;
+}
+
+.calendar-day .day-dot.dot-char {
+    background: #ff6b6b;
+}
+
+.calendar-day .day-dot.dot-self {
+    background: #ffa726;
+}
+
+.calendar-day.selected .day-dot.dot-user,
+.calendar-day.selected .day-dot.dot-char,
+.calendar-day.selected .day-dot.dot-self {
+    background: rgba(255,255,255,0.8);
+}
+
+/* === 2. 分类 Tabs === */
+.reminder-tabs {
+    position: relative; /* 作为绝对定位的参照物 */
+    display: flex;
+    background: rgba(227, 227, 232, 0.6); /* 稍微透明一点，增加层次 */
+    border-radius: 12px;
+    margin: 20px 20px 10px;
+    padding: 4px;
+    flex-shrink: 0;
+    z-index: 1; /* 保证层级 */
+}
+
+/* 滑动指示器 (高亮背景) */
+.reminder-tab-indicator {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    width: calc(50% - 4px); /* 两个tab，每个占一半减去padding */
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    z-index: -1; /* 放在文字下方 */
+    left: 4px; /* 初始位置 */
+}
+
+.reminder-tab {
+    flex: 1;
+    text-align: center;
+    padding: 8px 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: #8e8e93;
+    border-radius: 8px;
+    transition: color 0.3s;
+    cursor: pointer;
+}
+
+.reminder-tab.active {
+    color: #1c1c1e;
+}
+
+/* 根据当前激活的 tab 移动滑块位置 */
+.reminder-tabs.tab-user-active .reminder-tab-indicator {
+    transform: translateX(100%);
+}
+
+/* === 3. 卡片式提醒列表 === */
+.reminder-list-area {
+    padding: 10px 20px 100px; /* 底部留白给悬浮按钮 */
+    overflow-y: auto;
+    flex: 1;
+}
+
+.reminder-date-label {
+    font-size: 13px;
+    color: #999;
+    font-weight: 500;
+    padding: 12px 6px 6px;
+}
+
+.reminder-empty {
+    text-align: center;
+    color: #bbb;
+    font-size: 14px;
+    padding: 40px 20px;
+    line-height: 1.6;
+}
+
+.reminder-item {
+    background: #fff;
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center; /* Changed from flex-start to center for better vertical alignment */
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s;
+    gap: 12px;
+}
+
+/* 卡片左侧的彩色小彩条指示器 */
+.reminder-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+}
+/* JS 渲染时可以根据类型加 class: 'type-user' 或 'type-char' */
+.reminder-item.type-char::before { background: #ff6b6b; } 
+.reminder-item.type-user::before { background: #007aff; }
+.reminder-item.type-self::before { background: #ffa726; }
+
+.reminder-item.done {
+    opacity: 0.5;
+}
+
+.reminder-check {
+    width: 22px;
+    height: 22px;
+    border: 2px solid #ddd;
+    border-radius: 50%;
+    flex-shrink: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    margin-top: 1px;
+}
+
+.reminder-check:hover {
+    border-color: #007aff;
+}
+
+.reminder-item.done .reminder-check {
+    background: #007aff;
+    border-color: #007aff;
+}
+
+.reminder-item.done .reminder-check::after {
+    content: '';
+    width: 6px;
+    height: 10px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    margin-top: -2px;
+}
+
+.reminder-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.reminder-title {
+    font-size: 15px;
+    color: #333;
+    font-weight: 500;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.reminder-item.done .reminder-title {
+    text-decoration: line-through;
+    color: #999;
+}
+
+.reminder-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+
+.reminder-time-tag {
+    font-size: 12px;
+    color: #007aff;
+    background: rgba(0,122,255,0.08);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.reminder-type-tag {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.reminder-type-tag.tag-toUser {
+    color: #007aff;
+    background: rgba(0,122,255,0.08);
+}
+
+.reminder-type-tag.tag-toSelf {
+    color: #ffa726;
+    background: rgba(255,167,38,0.1);
+}
+
+.reminder-type-tag.tag-remindChar {
+    color: #66bb6a;
+    background: rgba(102,187,106,0.1);
+}
+
+.reminder-creator-tag {
+    font-size: 11px;
+    color: #999;
+}
+
+.reminder-repeat-tag {
+    font-size: 11px;
+    color: #ab47bc;
+    background: rgba(171,71,188,0.08);
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+
+.reminder-delete-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: none;
+    border: none;
+    color: #ccc;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+}
+
+.reminder-delete-btn:hover {
+    color: #ff5252;
+}
+
+.reminder-delete-btn svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+/* 新建提醒浮动按钮 */
+.reminder-fab {
+    position: absolute;
+    bottom: 30px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+    border-radius: 28px;
+    background: var(--primary-color, #cee4f1);
+    color: #333; /* 保证在浅蓝色背景上可见 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 24px rgba(206, 228, 241, 0.6);
+    border: none;
+    transition: transform 0.3s, box-shadow 0.3s;
+    z-index: 10;
+}
+
+.reminder-fab:hover {
+    transform: translateY(-4px) scale(1.05);
+    box-shadow: 0 12px 28px rgba(206, 228, 241, 0.8);
+}
+
+.reminder-fab svg {
+    width: 26px;
+    height: 26px;
+    fill: currentColor;
+}
+
+/* 新建/编辑提醒模态框 */
+#reminder-form-modal {
+    align-items: flex-end;
+    z-index: 300;
+}
+
+#reminder-form-modal.visible {
+    display: flex;
+}
+
+.reminder-form-sheet {
+    background: #fff;
+    width: 100%;
+    border-radius: 20px 20px 0 0;
+    padding: 20px 20px 30px;
+    animation: sheetUp 0.35s ease-out;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+@keyframes sheetUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+
+.reminder-form-sheet h3 {
+    margin: 0 0 18px;
+    font-size: 17px;
+    font-weight: 600;
+    color: #333;
+    text-align: center;
+}
+
+.reminder-form-group {
+    margin-bottom: 16px;
+}
+
+.reminder-form-group label {
+    display: block;
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+.reminder-form-group input,
+.reminder-form-group select {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1.5px solid #e8e8e8;
+    border-radius: 12px;
+    font-size: 15px;
+    background: #fafafa;
+    transition: border-color 0.2s;
+    font-family: var(--font-family);
+    color: #333;
+}
+
+.reminder-form-group input:focus,
+.reminder-form-group select:focus {
+    outline: none;
+    border-color: #007aff;
+    background: #fff;
+}
+
+.reminder-type-selector {
+    display: flex;
+    gap: 8px;
+}
+
+.reminder-type-option {
+    flex: 1;
+    padding: 10px 8px;
+    border: 1.5px solid #e8e8e8;
+    border-radius: 12px;
+    text-align: center;
+    font-size: 13px;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #fafafa;
+    font-weight: 500;
+}
+
+.reminder-type-option.active {
+    border-color: #007aff;
+    background: rgba(0,122,255,0.06);
+    color: #007aff;
+}
+
+.reminder-form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.reminder-form-actions button {
+    flex: 1;
+    padding: 13px;
+    border-radius: 12px;
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.reminder-btn-cancel {
+    background: #f0f0f0;
+    color: #666;
+}
+
+.reminder-btn-save {
+    background: #007aff;
+    color: #fff;
+}
+
+.reminder-btn-save:hover {
+    background: #0066dd;
+}

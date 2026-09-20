@@ -1,0 +1,43 @@
+/* 导入确认弹窗 - 导入开场白选项 */
+#import-confirm-modal .import-greeting-option {
+    margin-top: 16px;
+    margin-bottom: 4px;
+}
+#import-confirm-modal .import-greeting-card {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px 16px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+#import-confirm-modal .import-greeting-card:focus-within {
+    border-color: var(--primary-color, #6C8CD5);
+    box-shadow: 0 0 0 2px rgba(108, 140, 213, 0.15);
+}
+#import-confirm-modal .import-greeting-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    margin: 0;
+}
+#import-confirm-modal .import-greeting-checkbox {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--primary-color, #6C8CD5);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+#import-confirm-modal .import-greeting-label-text {
+    font-size: 15px;
+    font-weight: 500;
+    color: #334155;
+    white-space: nowrap;
+}
+#import-confirm-modal .import-greeting-hint {
+    font-size: 12px;
+    color: #64748b;
+    margin: 10px 0 0 28px;
+    line-height: 1.45;
+}

@@ -1,0 +1,485 @@
+/* --- 头像识别与头像库模块 --- */
+/* 与 base.css 变量统一，无表情符号、无渐变色 */
+
+.ar-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+    animation: ar-fadeIn 0.25s ease;
+}
+
+@keyframes ar-fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.ar-modal-overlay.visible {
+    display: flex;
+}
+
+.ar-modal {
+    background: #ffffff;
+    border-radius: var(--border-radius, 18px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    max-width: 360px;
+    width: 100%;
+    overflow: hidden;
+    animation: ar-slideUp 0.3s ease-out;
+    box-sizing: border-box;
+}
+
+@keyframes ar-slideUp {
+    from { transform: translateY(16px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.ar-modal-title {
+    padding: 14px 18px;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text-color, #2a3032);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.ar-modal-body {
+    padding: 18px;
+}
+
+.ar-preview-wrap {
+    text-align: center;
+    margin-bottom: 14px;
+}
+
+.ar-preview-wrap img {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.ar-desc-label {
+    font-size: 13px;
+    color: var(--secondary-color, #666);
+    margin-bottom: 6px;
+    display: block;
+}
+
+.ar-name-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 10px;
+    font-size: 14px;
+    color: var(--text-color, #333);
+    font-family: inherit;
+    margin-bottom: 10px;
+}
+
+.ar-name-input:focus {
+    outline: none;
+    border-color: var(--primary-color, #6C8CD5);
+}
+
+.ar-desc-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 10px;
+    font-size: 14px;
+    color: var(--text-color, #333);
+    min-height: 80px;
+    resize: vertical;
+    font-family: inherit;
+}
+
+.ar-desc-input:focus {
+    outline: none;
+    border-color: var(--primary-color, #6C8CD5);
+}
+
+@media (max-width: 480px) {
+    .ar-desc-input {
+        min-height: 100px;
+        font-size: 16px;
+    }
+}
+
+.ar-modal-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid #eee;
+}
+
+.ar-modal-actions .btn {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.ar-option-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 14px;
+    color: var(--text-color, #333);
+    cursor: pointer;
+}
+
+.ar-option-row input[type="checkbox"] {
+    accent-color: var(--primary-color, #6C8CD5);
+}
+
+/* 头像库管理 */
+.ar-library-modal .ar-modal {
+    max-width: 420px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.ar-library-modal .ar-modal-body {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 100px;
+}
+
+/* 头像库：网格卡片，默认无多选 */
+.ar-library-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.ar-library-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    border-radius: 12px;
+    background: #f8f8f8;
+    border: 1px solid #eee;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+}
+
+.ar-library-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    background: #fff;
+}
+
+.ar-library-card-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+.ar-library-check {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    margin: 0;
+    cursor: pointer;
+    width: 22px;
+    height: 22px;
+    border: 2px solid #ccc;
+    border-radius: 6px;
+    background: #fff;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    z-index: 1;
+}
+
+.ar-library-list.ar-delete-mode .ar-library-check {
+    display: flex;
+}
+
+.ar-library-list.ar-delete-mode .ar-library-check input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary-color, #6C8CD5);
+}
+
+.ar-library-thumb {
+    width: 72px;
+    height: 72px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 2px solid #eee;
+    flex-shrink: 0;
+}
+
+.ar-library-info {
+    width: 100%;
+    min-width: 0;
+    text-align: center;
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ar-library-name,
+.ar-library-name-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ar-library-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    background: #f8f8f8;
+    border: 1px solid #eee;
+    transition: background 0.2s;
+}
+
+.ar-library-row:hover {
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.ar-library-row-clickable {
+    cursor: pointer;
+}
+
+.ar-library-meta {
+    font-size: 11px;
+    color: #888;
+}
+
+.ar-edit-modal .ar-modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.ar-edit-meta {
+    font-size: 12px;
+    color: var(--secondary-color, #888);
+    margin-top: 6px;
+    margin-bottom: 8px;
+}
+
+.ar-edit-modal .ar-modal-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.ar-edit-modal .ar-modal-actions .btn {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.ar-library-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 18px;
+    border-top: 1px solid #eee;
+    gap: 10px;
+    flex-wrap: wrap;
+    background: #ffffff;
+}
+
+.ar-toolbar-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.ar-library-close.btn,
+.ar-library-batch-delete.btn,
+.ar-library-clear-all.btn {
+    margin-bottom: 0;
+}
+
+/* 角色头像库：上传区 */
+.ar-upload-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.ar-url-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.ar-url-input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 10px;
+    font-size: 14px;
+    color: var(--text-color, #333);
+    font-family: inherit;
+}
+
+.ar-url-input:focus {
+    outline: none;
+    border-color: var(--primary-color, #6C8CD5);
+}
+
+.ar-btn-upload {
+    align-self: flex-start;
+}
+
+/* 头像识别字数选择弹窗 */
+.ar-detail-option {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.ar-detail-option:hover {
+    background: #f9f9f9;
+}
+
+.ar-detail-option input[type="radio"] {
+    margin-right: 10px;
+    accent-color: #6C8CD5;
+}
+
+.ar-detail-option span {
+    font-size: 14px;
+    color: #333;
+}
+
+/* 情头库 */
+.ar-couple-library-modal .ar-modal {
+    max-width: 420px;
+}
+
+.ar-couple-library-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ar-couple-library-card .ar-couple-card-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+.ar-couple-pair {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+
+.ar-couple-thumb {
+    width: 56px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 2px solid #eee;
+}
+
+.ar-couple-library-card .ar-library-info {
+    margin-top: 4px;
+}
+
+.ar-couple-edit-modal .ar-modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.ar-couple-edit-preview {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+}
+
+.ar-couple-edit-pair {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    max-width: 50%;
+}
+
+.ar-couple-edit-label {
+    font-size: 12px;
+    color: var(--secondary-color, #666);
+}
+
+.ar-couple-edit-preview .ar-couple-edit-pair img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 2px solid #eee;
+}
+
+/* 情头库弹窗移动端适配 */
+@media (max-width: 480px) {
+    .ar-couple-edit-modal .ar-modal {
+        max-width: calc(100vw - 32px);
+    }
+    .ar-couple-edit-modal .ar-modal-body {
+        padding: 14px;
+        overflow-x: hidden;
+    }
+    .ar-couple-edit-pair .ar-url-row {
+        flex-wrap: wrap;
+    }
+    .ar-couple-edit-pair .ar-url-row .ar-url-input {
+        min-width: 0;
+        width: 100%;
+        font-size: 12px;
+    }
+}
+
+.ar-couple-edit-modal .ar-modal-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.ar-couple-edit-modal .ar-modal-actions .btn {
+    width: 100%;
+    margin-bottom: 0;
+}

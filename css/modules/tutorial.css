@@ -1,0 +1,784 @@
+/* --- Tutorial Screen Styles --- */
+
+/* --- Modern (V2) iOS Style Layout --- */
+.tutorial-modern-layout {
+    background-color: #f2f2f7; /* iOS grouped background */
+    padding: 16px 16px 80px;
+    min-height: 100%;
+}
+
+.tutorial-modern-group {
+    margin-bottom: 24px;
+}
+
+.tutorial-modern-group-title {
+    font-size: 13px;
+    color: #6d6d72;
+    text-transform: uppercase;
+    margin: 0 0 8px 16px;
+    letter-spacing: 0.05em;
+}
+
+.tutorial-modern-list {
+    background: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.tutorial-modern-item {
+    border-bottom: 1px solid #e5e5ea;
+}
+
+.tutorial-modern-item:last-child {
+    border-bottom: none;
+}
+
+.tutorial-modern-header {
+    padding: 14px 16px;
+    font-size: 16px;
+    color: #000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    background: #fff;
+    transition: background-color 0.2s;
+}
+
+.tutorial-modern-header:active {
+    background-color: #e5e5ea;
+}
+
+.tutorial-modern-header::after {
+    content: '›';
+    font-size: 20px;
+    color: #c7c7cc;
+    transition: transform 0.3s ease;
+    font-family: monospace;
+    line-height: 1;
+}
+
+.tutorial-modern-item.open .tutorial-modern-header::after {
+    transform: rotate(90deg);
+}
+
+.tutorial-modern-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease-in-out;
+    background: #fff;
+}
+
+.tutorial-modern-item.open .tutorial-modern-content {
+    max-height: 5000px;
+}
+
+.tutorial-modern-content-inner {
+    padding: 12px 16px 20px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.tutorial-modern-content img {
+    width: 100%;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    display: block;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.tutorial-modern-content img:last-child {
+    margin-bottom: 0;
+}
+
+/* Action Buttons as List Items */
+.tutorial-modern-action {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 14px 16px;
+    background: #fff;
+    border: none;
+    border-bottom: 1px solid #e5e5ea;
+    font-size: 16px;
+    color: #007aff; /* iOS blue */
+    text-align: left;
+    cursor: pointer;
+    margin: 0;
+    font-family: inherit;
+}
+
+.tutorial-modern-action:last-child {
+    border-bottom: none;
+}
+
+.tutorial-modern-action:active {
+    background-color: #e5e5ea;
+}
+
+.tutorial-modern-action.danger {
+    color: #ff3b30; /* iOS red */
+}
+
+.tutorial-modern-action .arrow {
+    color: #c7c7cc;
+    font-size: 20px;
+    font-family: monospace;
+}
+
+.tutorial-modern-action:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* GitHub Card */
+.tutorial-modern-gh-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 16px;
+}
+
+.tutorial-modern-gh-card input,
+.tutorial-modern-gh-card select {
+    background: #f2f2f7;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 10px 12px !important;
+    font-size: 15px !important;
+}
+
+.tutorial-modern-gh-card .gh-btn {
+    border-radius: 8px !important;
+    font-weight: 500;
+}
+
+#tutorial-screen {
+    background-color: #f2f2f2;
+}
+
+#tutorial-screen .content {
+    padding: 15px 15px 80px;
+}
+
+.tutorial-item {
+    margin-bottom: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    overflow: hidden;
+    background-color: #ffffff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+}
+
+.tutorial-header {
+    padding: 12px 18px;
+    font-weight: 600;
+    color: var(--secondary-color);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tutorial-header::after {
+    content: '▼';
+    font-size: 12px;
+    transition: transform 0.3s ease;
+    color: #999;
+}
+
+.tutorial-item.open .tutorial-header::after {
+    transform: rotate(180deg);
+}
+
+.tutorial-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease-in-out, padding 0.5s ease;
+    padding: 0 10px;
+}
+
+.tutorial-item.open .tutorial-content {
+    padding: 10px 10px;
+    /* A large value to ensure it expands to fit the content */
+    max-height: 5000px;
+}
+
+.tutorial-content img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    display: block;
+}
+
+/* --- Guide System Styles --- */
+
+.guide-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 100000; /* Highest priority */
+    pointer-events: auto; /* Block interactions */
+    display: none;
+}
+
+.guide-overlay.visible {
+    display: block;
+}
+
+/* The highlight box uses a massive box-shadow to create the dimming effect around it */
+.guide-highlight-box {
+    position: absolute;
+    border-radius: 8px;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.75); 
+    z-index: 100001;
+    pointer-events: none; /* Let clicks pass through to the target if needed, but usually we block */
+    transition: all 0.3s ease;
+    /* Optional: Add a pulsing border */
+    border: 2px solid var(--primary-color);
+    animation: guide-pulse 2s infinite;
+}
+
+@keyframes guide-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(var(--primary-color-rgb), 0.4), 0 0 0 9999px rgba(0, 0, 0, 0.75); }
+    70% { box-shadow: 0 0 0 10px rgba(var(--primary-color-rgb), 0), 0 0 0 9999px rgba(0, 0, 0, 0.75); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--primary-color-rgb), 0), 0 0 0 9999px rgba(0, 0, 0, 0.75); }
+}
+
+.guide-tooltip {
+    position: absolute;
+    background: #fff;
+    padding: 15px;
+    border-radius: 12px;
+    width: 280px;
+    max-width: 90vw;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    z-index: 100002;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: auto;
+}
+
+.guide-tooltip.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.guide-tooltip::after {
+    content: '';
+    position: absolute;
+    border: 8px solid transparent;
+}
+
+/* Tooltip Arrows */
+.guide-tooltip.bottom::after {
+    top: -16px;
+    left: var(--arrow-left, 50%);
+    transform: translateX(-50%);
+    border-bottom-color: #fff;
+}
+
+.guide-tooltip.top::after {
+    bottom: -16px;
+    left: var(--arrow-left, 50%);
+    transform: translateX(-50%);
+    border-top-color: #fff;
+}
+
+.guide-content {
+    font-size: 14px;
+    color: #333;
+    line-height: 1.5;
+    margin-bottom: 15px;
+}
+
+.guide-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.guide-btn {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    border: none;
+}
+
+.guide-btn-primary {
+    background: var(--primary-color);
+    color: #fff;
+}
+
+.guide-btn-skip {
+    background: transparent;
+    color: #999;
+}
+
+/* --- 角色高级清理弹窗 --- */
+.char-advanced-clean-window .char-clean-section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    gap: 8px;
+    padding: 0 4px;
+}
+.char-advanced-clean-window .char-clean-section-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.char-advanced-clean-window .char-clean-section-title::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 14px;
+    background: var(--primary-color, #ff6b81);
+    border-radius: 2px;
+}
+.char-advanced-clean-window .char-clean-head-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.char-advanced-clean-window .char-clean-head-btn {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    border-radius: 12px;
+    background: #f0f0f0;
+    color: #555;
+    border: none;
+}
+.char-advanced-clean-window .char-clean-head-btn:hover {
+    background: #e0e0e0;
+}
+.char-advanced-clean-window .char-clean-entity-list {
+    max-height: 240px;
+    overflow-y: auto;
+    border: 1px solid #eaeaea;
+    border-radius: 12px;
+    padding: 6px;
+    background: #fafafa;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+}
+.char-advanced-clean-window .char-clean-entity-list label {
+    display: flex;
+    align-items: center;
+    min-height: 48px;
+    padding: 8px 12px;
+    margin: 2px 0;
+    cursor: pointer;
+    gap: 12px;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+}
+.char-advanced-clean-window .char-clean-entity-list label:hover {
+    background: #f0f4ff;
+}
+.char-advanced-clean-window .char-clean-entity-list label:has(input[type="checkbox"]:checked) {
+    background: #e8f0fe;
+    border: 1px solid #b3d4ff;
+    margin: 1px 0;
+}
+.char-advanced-clean-window .char-clean-entity-list input[type="checkbox"] {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--primary-color, #ff6b81);
+}
+.char-advanced-clean-window .char-clean-entity-list .char-clean-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.char-advanced-clean-window .char-clean-entity-list .char-clean-name {
+    flex: 1;
+    font-size: 0.92rem;
+    color: #333;
+    min-width: 0;
+    font-weight: 500;
+}
+.char-advanced-clean-window .char-clean-options-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+    margin-top: 10px;
+}
+.char-advanced-clean-window .char-clean-options-list label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: #444;
+    padding: 10px 12px;
+    background: #f8f9fa;
+    border: 1px solid #eaeaea;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+.char-advanced-clean-window .char-clean-options-list label:hover {
+    background: #f0f4ff;
+    border-color: #d0e0ff;
+}
+.char-advanced-clean-window .char-clean-options-list label:has(input[type="checkbox"]:checked) {
+    background: #e8f0fe;
+    border-color: #91caff;
+    color: #0056b3;
+    font-weight: 500;
+}
+.char-advanced-clean-window .char-clean-options-list input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    flex-shrink: 0;
+    accent-color: var(--primary-color, #ff6b81);
+}
+
+/* Modal styles for custom confirm/alert */
+.custom-confirm-window h3,
+.custom-alert-window h3 {
+    font-weight: 600;
+}
+.custom-confirm-window p,
+.custom-alert-window p {
+    word-break: break-word;
+}
+
+/* --- Rabbit Island (V3) Style Layout --- */
+.tutorial-rabbit-layout {
+    background: #fdfbfb; /* 极淡的粉白背景 */
+    padding: 20px 16px 80px;
+    min-height: 100%;
+    position: relative;
+}
+
+.tutorial-rabbit-header-title {
+    font-size: 20px;
+    font-weight: 500;
+    color: #555;
+    text-align: center;
+    margin-bottom: 24px;
+    letter-spacing: 2px;
+}
+
+.tutorial-rabbit-card {
+    background: #ffffff;
+    border-radius: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+    border: 1px solid #f5f0f1;
+    overflow: hidden;
+}
+
+.tutorial-rabbit-card-title {
+    padding: 16px 20px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #444;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    background: #ffffff;
+    transition: background-color 0.2s;
+}
+
+.tutorial-rabbit-card-title:active {
+    background-color: #faf8f9;
+}
+
+.tutorial-rabbit-card-title::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid #ccc;
+    border-bottom: 2px solid #ccc;
+    transform: rotate(45deg);
+    transition: transform 0.3s ease;
+    margin-right: 4px;
+}
+
+.tutorial-rabbit-card.open .tutorial-rabbit-card-title::after {
+    transform: rotate(-135deg);
+    margin-top: 4px;
+}
+
+.tutorial-rabbit-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease-in-out;
+    background: #ffffff;
+}
+
+.tutorial-rabbit-card.open .tutorial-rabbit-content {
+    max-height: 5000px;
+}
+
+.tutorial-rabbit-content-inner {
+    padding: 0 16px 20px;
+    border-top: 1px solid #fcfafb;
+}
+
+.tutorial-rabbit-content img {
+    width: 100%;
+    border-radius: 12px;
+    margin-top: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    border: 1px solid #fcfafb;
+    display: block;
+}
+
+.tutorial-rabbit-action {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 15px;
+    background: #ffffff;
+    color: #555;
+    border: 1px solid #f0eaeb;
+    border-radius: 16px;
+    font-size: 15px;
+    font-weight: 500;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.01);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.tutorial-rabbit-action:active {
+    transform: scale(0.98);
+    background: #faf8f9;
+}
+
+.tutorial-rabbit-action.danger {
+    color: #e74c3c;
+    border-color: #fceeee;
+}
+
+.tutorial-rabbit-action.neutral {
+    background: #fdfbfb;
+    color: #666;
+}
+
+.tutorial-rabbit-update-btn {
+    display: block;
+    width: 100%;
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+    padding: 14px;
+    background: #ffffff;
+    border-radius: 16px;
+    margin-bottom: 24px;
+    border: 1px solid #f0eaeb;
+    cursor: pointer;
+    font-weight: 500;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.01);
+}
+
+.tutorial-rabbit-update-btn:active {
+    background: #faf8f9;
+}
+
+/* Update log modal for Rabbit mode */
+.rabbit-update-modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(253, 251, 251, 0.95);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.rabbit-update-modal.show {
+    display: flex;
+}
+
+.rabbit-update-content {
+    background: #fff;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 400px;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 24px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.05);
+    border: 1px solid #f5f0f1;
+    position: relative;
+}
+
+.rabbit-update-close-x {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    font-size: 22px;
+    color: #aaa;
+    cursor: pointer;
+    line-height: 1;
+    z-index: 1;
+}
+
+.rabbit-update-close-x:active {
+    color: #888;
+}
+
+.rabbit-update-close {
+    margin-top: 20px;
+    width: 100%;
+    padding: 14px;
+    background: #fdfbfb;
+    color: #555;
+    border: 1px solid #f0eaeb;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.rabbit-update-close:active {
+    background: #f5f0f1;
+}
+
+/* --- Modern Link Cards (匿名许愿 / 公开许愿) --- */
+.tutorial-modern-link-card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    border-top: 1px solid #e5e5ea;
+    transition: background-color 0.2s;
+}
+
+.tutorial-modern-link-card:active {
+    background-color: #e5e5ea;
+}
+
+.tutorial-modern-link-card-inner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+}
+
+.tutorial-modern-link-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: #f2f2f7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #007aff;
+}
+
+.tutorial-modern-link-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.tutorial-modern-link-title {
+    color: #000;
+    font-weight: 500;
+    font-size: 16px;
+    margin-bottom: 2px;
+}
+
+.tutorial-modern-link-desc {
+    font-size: 13px;
+    color: #8e8e93;
+}
+
+.tutorial-modern-link-card .arrow {
+    color: #c7c7cc;
+    font-size: 20px;
+    font-family: monospace;
+    flex-shrink: 0;
+}
+
+.tutorial-modern-link-note {
+    padding: 0 16px 12px;
+    font-size: 12px;
+    color: #8e8e93;
+    line-height: 1.5;
+}
+
+/* --- Rabbit Link Cards (匿名许愿 / 公开许愿) --- */
+.tutorial-rabbit-link-card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    margin-bottom: 16px;
+}
+
+.tutorial-rabbit-link-card .tutorial-rabbit-card {
+    transition: transform 0.2s;
+}
+
+.tutorial-rabbit-link-card:active .tutorial-rabbit-card {
+    transform: scale(0.98);
+    background: #faf8f9;
+}
+
+.tutorial-rabbit-link-card-inner {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+}
+
+.tutorial-rabbit-link-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: #f5f0f1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #999;
+}
+
+.tutorial-rabbit-link-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.tutorial-rabbit-link-title {
+    color: #444;
+    font-weight: 500;
+    font-size: 15px;
+    margin-bottom: 3px;
+}
+
+.tutorial-rabbit-link-desc {
+    font-size: 13px;
+    color: #aaa;
+}
+
+.tutorial-rabbit-link-note {
+    padding: 0 20px 14px;
+    font-size: 12px;
+    color: #bbb;
+    line-height: 1.5;
+    border-top: 1px solid #fcfafb;
+    margin: 0 20px;
+    padding-top: 10px;
+}

@@ -1,0 +1,46 @@
+/* === TTS 语音选择器样式 === */
+.voice-lang-filter {
+    transition: all 0.2s;
+}
+
+.voice-lang-filter.active {
+    background: var(--primary-color) !important;
+    color: white !important;
+    border-color: var(--primary-color) !important;
+}
+
+.voice-item {
+    transition: all 0.2s;
+}
+
+.voice-item:hover {
+    background: #f5f5f5 !important;
+    border-color: var(--primary-color) !important;
+}
+
+.voice-item.selected {
+    background: #e3f2fd !important;
+    border-color: var(--primary-color) !important;
+}
+
+#voice-list-container {
+    scrollbar-width: thin;
+    scrollbar-color: #ccc transparent;
+}
+
+#voice-list-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+#voice-list-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#voice-list-container::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+}
+
+#voice-list-container::-webkit-scrollbar-thumb:hover {
+    background: #999;
+}

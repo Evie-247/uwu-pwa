@@ -1,0 +1,1505 @@
+// --- 工具函数库 (js/utils.js) ---
+
+// 电池状态更新
+async function updateBatteryStatus() {
+    if ('getBattery' in navigator) {
+        try {
+            const battery = await navigator.getBattery();
+            const batteryLevelText = document.getElementById('battery-level');
+            const batteryFillRect = document.getElementById('battery-fill-rect');
+
+            const updateDisplay = () => {
+                if (!batteryLevelText || !batteryFillRect) return;
+                const level = Math.floor(battery.level * 100);
+                batteryLevelText.textContent = `${level}%`;
+                batteryFillRect.setAttribute('width', 18 * battery.level);
+                let fillColor = "#666"; 
+                if (battery.charging) {
+                    fillColor = "#4CAF50"; 
+                } else if (level <= 20) {
+                    fillColor = "#f44336"; 
+                }
+                batteryFillRect.setAttribute('fill', fillColor);
+            };
+
+            updateDisplay();
+            battery.addEventListener('levelchange', updateDisplay);
+            battery.addEventListener('chargingchange', updateDisplay);
+
+        } catch (error) {
+            console.error('无法获取电池信息:', error);
+            const batteryWidget = document.querySelector('.widget-battery');
+            if (batteryWidget) batteryWidget.style.display = 'none';
+        }
+    } else {
+        const batteryWidget = document.querySelector('.widget-battery');
+        if (batteryWidget) batteryWidget.style.display = 'none';
+    }
+}
+
+// 随机获取 API Key
+function getRandomValue(str) {
+    if (str && str.includes(',')) {
+        const arr = str.split(',').map(item => item.trim());
+        const randomIndex = Math.floor(Math.random() * arr.length);
+        return arr[randomIndex];
+    }
+    return str;
+}
+
+// 图片压缩工具
+async function compressImage(file, options = {}) {
+    const { quality = 0.8, maxWidth = 800, maxHeight = 800 } = options;
+
+    if (file.type === 'image/gif') {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+    }
+
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onerror = reject;
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onerror = reject;
+            img.onload = () => {
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > maxWidth) {
+                        height = Math.round(height * (maxWidth / width));
+                        width = maxWidth;
+                    }
+                } else {
+                    if (height > maxHeight) {
+                        width = Math.round(width * (maxHeight / height));
+                        height = maxHeight;
+                    }
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+
+                if (file.type === 'image/png') {
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, width, height);
+                }
+
+                ctx.drawImage(img, 0, 0, width, height);
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                resolve(compressedDataUrl);
+            };
+        };
+    });
+}
+
+// 数字补零
+const pad = (num) => num.toString().padStart(2, '0');
+
+// 获取指定时区的当前当地时间
+function getLocalTimeInTimezone(timezone) {
+    if (!timezone) return null;
+    
+    // 兼容旧的非标准预设格式
+    const legacyTimezoneMap = {
+        '北京/UTC+8': 'Asia/Shanghai',
+        '东京/UTC+9': 'Asia/Tokyo',
+        '首尔/UTC+9': 'Asia/Seoul',
+        '伦敦/UTC+0': 'Europe/London',
+        '纽约/UTC-5': 'America/New_York',
+        '悉尼/UTC+10': 'Australia/Sydney',
+        '巴黎/UTC+1': 'Europe/Paris'
+    };
+    
+    if (legacyTimezoneMap[timezone]) {
+        timezone = legacyTimezoneMap[timezone];
+    }
+    
+    try {
+        const options = {
+            timeZone: timezone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        };
+        const formatter = new Intl.DateTimeFormat('zh-CN', options);
+        return formatter.format(new Date());
+    } catch (e) {
+        console.error("Invalid timezone:", timezone, e);
+        return null;
+    }
+}
+
+// PNG tEXt Chunk 编辑工具
+function writeOvoPngMetadata(base64ImageOrUrl, jsonData) {
+    return new Promise((resolve, reject) => {
+        // 先确保图片是 PNG Base64 格式
+        const img = new Image();
+        img.crossOrigin = 'Anonymous'; // 尝试跨域加载
+
+        img.onload = () => {
+            try {
+                // 将图片绘制到 Canvas 以转换为干净的 PNG Base64
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth || 800;
+                canvas.height = img.naturalHeight || 800;
+                const ctx = canvas.getContext('2d');
+                // 绘制背景为透明（如果原图有透明的话）或白色
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+
+                const cleanPngBase64 = canvas.toDataURL('image/png');
+                
+                // 移除 base64 前缀
+                const base64Data = cleanPngBase64.replace(/^data:image\/png;base64,/, '');
+                const rawData = atob(base64Data);
+                const uint8Array = new Uint8Array(rawData.length);
+                for (let i = 0; i < rawData.length; i++) {
+                    uint8Array[i] = rawData.charCodeAt(i);
+                }
+
+                // 检查 PNG 签名
+                const signature = [137, 80, 78, 71, 13, 10, 26, 10];
+                for (let i = 0; i < signature.length; i++) {
+                    if (uint8Array[i] !== signature[i]) {
+                        return reject(new Error('Invalid PNG signature after canvas conversion'));
+                    }
+                }
+
+                // 编码 tEXt 块数据
+                const keyword = 'ovo_chara';
+                const textData = btoa(unescape(encodeURIComponent(JSON.stringify(jsonData)))); // Base64 编码的 JSON
+                
+                const keywordBytes = new TextEncoder().encode(keyword);
+                const nullSeparator = new Uint8Array([0]);
+                const textBytes = new TextEncoder().encode(textData);
+                
+                const chunkData = new Uint8Array(keywordBytes.length + 1 + textBytes.length);
+                chunkData.set(keywordBytes, 0);
+                chunkData.set(nullSeparator, keywordBytes.length);
+                chunkData.set(textBytes, keywordBytes.length + 1);
+
+                // 计算 CRC
+                const crcTable = [];
+                for (let i = 0; i < 256; i++) {
+                    let c = i;
+                    for (let j = 0; j < 8; j++) {
+                        c = ((c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1));
+                    }
+                    crcTable[i] = c;
+                }
+                function crc32(data) {
+                    let crc = 0xffffffff;
+                    for (let i = 0; i < data.length; i++) {
+                        crc = crcTable[(crc ^ data[i]) & 0xff] ^ (crc >>> 8);
+                    }
+                    return crc ^ 0xffffffff;
+                }
+
+                const chunkType = new TextEncoder().encode('tEXt');
+                const crcData = new Uint8Array(chunkType.length + chunkData.length);
+                crcData.set(chunkType, 0);
+                crcData.set(chunkData, chunkType.length);
+                
+                const crcValue = crc32(crcData);
+
+                // 组装 Chunk
+                const lengthBytes = new Uint8Array(4);
+                new DataView(lengthBytes.buffer).setUint32(0, chunkData.length);
+                
+                const crcBytes = new Uint8Array(4);
+                new DataView(crcBytes.buffer).setUint32(0, crcValue);
+
+                const newChunk = new Uint8Array(lengthBytes.length + chunkType.length + chunkData.length + crcBytes.length);
+                let offset = 0;
+                newChunk.set(lengthBytes, offset); offset += lengthBytes.length;
+                newChunk.set(chunkType, offset); offset += chunkType.length;
+                newChunk.set(chunkData, offset); offset += chunkData.length;
+                newChunk.set(crcBytes, offset);
+
+                // 寻找 IHDR 块，在它之后插入我们的 tEXt 块
+                let insertPos = 8;
+                const view = new DataView(uint8Array.buffer);
+                const length = view.getUint32(insertPos);
+                insertPos += 8 + length + 4; // Skip IHDR
+
+                const newUint8Array = new Uint8Array(uint8Array.length + newChunk.length);
+                newUint8Array.set(uint8Array.slice(0, insertPos), 0);
+                newUint8Array.set(newChunk, insertPos);
+                newUint8Array.set(uint8Array.slice(insertPos), insertPos + newChunk.length);
+
+                // 转换回 Base64 Data URL
+                let binary = '';
+                for (let i = 0; i < newUint8Array.length; i++) {
+                    binary += String.fromCharCode(newUint8Array[i]);
+                }
+                resolve('data:image/png;base64,' + btoa(binary));
+
+            } catch (error) {
+                reject(error);
+            }
+        };
+        img.onerror = () => reject(new Error('Failed to load image for PNG conversion'));
+        img.src = base64ImageOrUrl;
+    });
+}
+
+function readOvoPngMetadata(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsArrayBuffer(file);
+        reader.onload = (e) => {
+            try {
+                const buffer = e.target.result;
+                const view = new DataView(buffer);
+                const signature = [137, 80, 78, 71, 13, 10, 26, 10];
+                for (let i = 0; i < signature.length; i++) {
+                    if (view.getUint8(i) !== signature[i]) {
+                        return reject(new Error('文件不是一个有效的PNG。'));
+                    }
+                }
+
+                let offset = 8;
+                let charaData = null;
+
+                while (offset < view.byteLength) {
+                    const length = view.getUint32(offset);
+                    const type = String.fromCharCode(view.getUint8(offset + 4), view.getUint8(offset + 5), view.getUint8(offset + 6), view.getUint8(offset + 7));
+
+                    if (type === 'tEXt') {
+                        const textChunk = new Uint8Array(buffer, offset + 8, length);
+                        let separatorIndex = -1;
+                        for (let i = 0; i < textChunk.length; i++) {
+                            if (textChunk[i] === 0) {
+                                separatorIndex = i;
+                                break;
+                            }
+                        }
+
+                        if (separatorIndex !== -1) {
+                            const keyword = new TextDecoder('utf-8').decode(textChunk.slice(0, separatorIndex));
+                            if (keyword === 'ovo_chara') {
+                                const base64Data = new TextDecoder('utf-8').decode(textChunk.slice(separatorIndex + 1));
+                                try {
+                                    const decodedString = decodeURIComponent(escape(atob(base64Data)));
+                                    charaData = JSON.parse(decodedString);
+                                    break;
+                                } catch (decodeError) {
+                                    return reject(new Error(`解析专属角色数据失败: ${decodeError.message}`));
+                                }
+                            }
+                        }
+                    }
+                    offset += 12 + length;
+                }
+
+                if (charaData) {
+                    const imageReader = new FileReader();
+                    imageReader.readAsDataURL(file);
+                    imageReader.onload = (imgEvent) => {
+                        resolve({ data: charaData, avatar: imgEvent.target.result });
+                    };
+                    imageReader.onerror = () => {
+                        resolve({ data: charaData, avatar: 'https://i.postimg.cc/Y96LPskq/o-o-2.jpg' });
+                    };
+                } else {
+                    reject(new Error('在PNG中未找到专属角色数据 (tEXt chunk not found)。'));
+                }
+            } catch (error) {
+                reject(new Error(`解析PNG失败: ${error.message}`));
+            }
+        };
+        reader.onerror = () => reject(new Error('读取PNG文件失败。'));
+    });
+}
+
+// UUID 生成器
+function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+// Toast 通知系统
+let notificationQueue = [];
+let isToastVisible = false;
+
+function processToastQueue() {
+    if (isToastVisible || notificationQueue.length === 0) {
+        return;
+    }
+
+    isToastVisible = true;
+    const notification = notificationQueue.shift();
+
+    const toastElement = document.getElementById('toast-notification');
+    const avatarEl = toastElement.querySelector('.toast-avatar');
+    const nameEl = toastElement.querySelector('.toast-name');
+    const messageEl = toastElement.querySelector('.toast-message');
+
+    const isRichNotification = typeof notification === 'object' && notification !== null && notification.name;
+    const isMutedSimple = typeof notification === 'object' && notification !== null && notification.muted && notification.text != null;
+
+    if (isRichNotification) {
+        toastElement.classList.remove('simple', 'toast-muted');
+        avatarEl.style.display = 'block';
+        nameEl.style.display = 'block';
+        messageEl.style.textAlign = 'left';
+        avatarEl.src = notification.avatar || 'https://i.postimg.cc/Y96LPskq/o-o-2.jpg';
+        nameEl.textContent = notification.name;
+        messageEl.textContent = notification.message;
+    } else if (isMutedSimple) {
+        toastElement.classList.add('simple', 'toast-muted');
+        avatarEl.style.display = 'none';
+        nameEl.style.display = 'none';
+        messageEl.style.textAlign = 'center';
+        messageEl.textContent = notification.text;
+    } else {
+        toastElement.classList.add('simple');
+        toastElement.classList.remove('toast-muted');
+        avatarEl.style.display = 'none';
+        nameEl.style.display = 'none';
+        messageEl.style.textAlign = 'center';
+        messageEl.textContent = typeof notification === 'string' ? notification : (notification && notification.text) || '';
+    }
+
+    toastElement.classList.add('show');
+
+    setTimeout(() => {
+        toastElement.classList.remove('show', 'toast-muted');
+        setTimeout(() => {
+            isToastVisible = false;
+            processToastQueue();
+        }, 500);
+    }, 3000);
+}
+
+const showToast = (notification) => {
+    notificationQueue.push(notification);
+    processToastQueue();
+};
+
+// 系统级通知（通过 Service Worker postMessage 触发，无需服务器，应用前/后台均有效）
+async function showSystemNotification({ title, body, icon }) {
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    if (!navigator.serviceWorker) return;
+
+    try {
+        const reg = await navigator.serviceWorker.ready;
+        if (reg && reg.active) {
+            reg.active.postMessage({
+                type: 'SHOW_NOTIFICATION',
+                payload: { title, body: body || '', icon: icon || undefined, tag: 'ovo-message' }
+            });
+        }
+    } catch (e) {
+        console.warn('showSystemNotification error:', e);
+    }
+}
+window.showSystemNotification = showSystemNotification;
+
+// 触感反馈工具
+function triggerHapticFeedback(type = 'light') {
+    // 检查全局开关
+    if (!db.hapticEnabled) return;
+    if (!navigator.vibrate) return;
+
+    try {
+        switch (type) {
+            case 'light':
+                navigator.vibrate(5); // 极轻微震动
+                break;
+            case 'medium':
+                navigator.vibrate(15); // 中等震动
+                break;
+            case 'heavy':
+                navigator.vibrate(30); // 重度震动
+                break;
+            case 'success':
+                navigator.vibrate([10, 30, 10]); // 成功震动模式
+                break;
+            case 'error':
+                navigator.vibrate([50, 30, 50, 30, 50]); // 错误震动模式
+                break;
+            case 'selection':
+                navigator.vibrate(10); // 选择震动
+                break;
+            default:
+                navigator.vibrate(5);
+        }
+    } catch (e) {
+        // 忽略不支持或被禁用的情况
+    }
+}
+
+// 错误处理翻译
+function getFriendlyErrorMessage(error) {
+    if (error.name === 'AbortError') return '请求超时了，请检查您的网络或稍后再试。';
+    if (error instanceof SyntaxError) return '服务器返回的数据格式不对，建议您重试一次。';
+    
+    if (error.response) {
+        const status = error.response.status;
+        switch (status) {
+            case 400: return '请求参数有误 (400)，通常是模型版本不对或发送内容过长。';
+            case 401: return 'API密钥无效 (401)，请检查API设置中的Key是否正确。';
+            case 403: return '访问被拒绝 (403)，可能是密钥权限不足或账号被封禁。';
+            case 404: return 'API地址错误 (404)，找不到请求的接口，请检查Base URL。';
+            case 429: return '请求太频繁啦 (429)，触发了速率限制，请稍等一会再试。';
+            case 500: return '服务器内部错误 (500)，服务商那边出问题了。';
+            case 502: return '网关错误 (502)，服务商网络异常。';
+            case 503: return '服务暂时不可用 (503)，服务器可能正在维护或过载。';
+            case 504: return '网关超时 (504)，服务器响应太慢了，请检查网络。';
+            default: return `服务器返回了一个错误 (状态码: ${status})，请稍后再试。`;
+        }
+    }
+
+    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        return '无法连接到服务器，请检查您的网络连接或API地址是否正确。';
+    }
+
+    return `发生了一个未知错误：${error.message}`;
+}
+
+// 显示错误弹窗
+function showErrorModal(friendlyMessage, fullError) {
+    const oldModal = document.getElementById('error-modal-overlay');
+    if (oldModal) oldModal.remove();
+
+    let logContent = `Error: ${fullError.name}: ${fullError.message}\n`;
+    if (fullError.stack) logContent += `\nStack:\n${fullError.stack}\n`;
+    if (fullError.response) {
+        logContent += `\nResponse Status: ${fullError.response.status}\n`;
+    }
+
+    const modalHtml = `
+    <div id="error-modal-overlay" class="modal-overlay visible" style="z-index: 9999; align-items: center; justify-content: center; display: flex;">
+        <div class="modal-window" style="max-width: 90%; width: 380px; padding: 0; overflow: hidden; display: flex; flex-direction: column; max-height: 85vh; border-radius: 16px; background: #fff; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+            <div style="padding: 25px 20px 15px; text-align: center; flex-shrink: 0;">
+                <div style="width: 56px; height: 56px; background: #ffebee; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                    <svg style="width: 32px; height: 32px; color: #d32f2f;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </div>
+                <h3 style="margin: 0; color: #333; font-size: 18px; font-weight: 700;">出错了</h3>
+                <p style="margin: 10px 0 0; color: #666; font-size: 15px; line-height: 1.5;">${friendlyMessage}</p>
+            </div>
+            <div style="flex-grow: 1; overflow-y: auto; padding: 0 20px 10px;">
+                <div class="collapsible-section" style="border: 1px solid #eee; background: #f9f9f9; margin: 0; border-radius: 8px;">
+                    <div class="collapsible-header" style="padding: 12px; background: #f5f5f5; border-bottom: 1px solid #eee;" onclick="this.parentElement.classList.toggle('open')">
+                        <span style="font-size: 13px; color: #666; font-weight: 600; display: flex; align-items: center; gap: 5px;">
+                            <svg style="width: 14px; height: 14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                            查看详细日志
+                        </span>
+                        <span class="collapsible-arrow" style="color: #999;">▼</span>
+                    </div>
+                    <div class="collapsible-content" style="padding: 0 12px;">
+                        <pre id="error-log-content" style="font-family: 'Menlo', 'Monaco', 'Courier New', monospace; font-size: 11px; color: #444; white-space: pre-wrap; word-break: break-all; margin: 10px 0; background: #fff; padding: 10px; border: 1px solid #eee; border-radius: 4px; max-height: 200px; overflow-y: auto; line-height: 1.4;">${logContent}</pre>
+                        <button id="copy-error-btn" class="btn btn-small btn-neutral" style="margin-bottom: 10px; font-size: 12px; padding: 6px 12px; width: 100%; display: flex; justify-content: center; background: #eee; color: #555; border: none;">
+                            <svg style="width: 14px; height: 14px; margin-right: 5px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            复制完整日志
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div style="padding: 15px 20px 20px; border-top: none; text-align: center; background: #fff; flex-shrink: 0;">
+                <button class="btn btn-primary" style="width: 100%; border-radius: 12px; font-weight: 600; font-size: 16px; padding: 12px;" onclick="document.getElementById('error-modal-overlay').remove()">知道了</button>
+            </div>
+        </div>
+    </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    document.getElementById('copy-error-btn').addEventListener('click', function() {
+        navigator.clipboard.writeText(logContent).then(() => {
+            this.innerHTML = `<svg style="width: 14px; height: 14px; margin-right: 5px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"></path></svg>已复制`;
+            this.style.background = '#e8f5e9';
+            this.style.color = '#2e7d32';
+            setTimeout(() => {
+                this.innerHTML = `<svg style="width: 14px; height: 14px; margin-right: 5px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>复制完整日志`;
+                this.style.background = '#eee';
+                this.style.color = '#555';
+            }, 2000);
+        });
+    });
+}
+
+function showApiError(error) {
+    console.error("API Error Detected:", error);
+    const friendlyMessage = getFriendlyErrorMessage(error);
+    showErrorModal(friendlyMessage, error);
+}
+
+// 格式化时间分割线
+function formatTimeDivider(timestamp) {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday = date.toDateString() === yesterday.toDateString();
+    
+    const isSameYear = date.getFullYear() === now.getFullYear();
+    
+    const timeStr = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    
+    if (isToday) {
+        return timeStr;
+    } else if (isYesterday) {
+        return `昨天 ${timeStr}`;
+    } else if (isSameYear) {
+        return `${date.getMonth() + 1}月${date.getDate()}日 ${timeStr}`;
+    } else {
+        return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 ${timeStr}`;
+    }
+}
+
+// 格式化时间戳 YYYY-MM-DD HH:MM:SS
+function getFormattedTimestamp(date) {
+    const Y = date.getFullYear();
+    const M = String(date.getMonth() + 1).padStart(2, '0');
+    const D = String(date.getDate()).padStart(2, '0');
+    const h = String(date.getHours()).padStart(2, '0');
+    const m = String(date.getMinutes()).padStart(2, '0');
+    const s = String(date.getSeconds()).padStart(2, '0');
+    return `${Y}-${M}-${D} ${h}:${m}:${s}`;
+}
+
+// 格式化时间差
+function formatTimeGap(milliseconds) {
+    const seconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    if (days > 0) return `${days}天${hours % 24}小时`;
+    if (hours > 0) return `${hours}小时${minutes % 60}分钟`;
+    if (minutes > 0) return `${minutes}分钟`;
+    return `${seconds}秒`;
+}
+
+function calculateVoiceDuration(text) {
+    return Math.max(1, Math.min(60, Math.ceil(text.length / 3.5)));
+}
+
+// 模板处理函数：替换头像、名字等变量
+function processTemplate(html, char) {
+    if (!html || !char) return html;
+    let processed = html;
+    
+    // 获取当前上下文中的头像和名字
+    // 注意：currentChatType 和 db 是全局变量，确保在此处可用
+    const isPrivate = (typeof currentChatType !== 'undefined' && currentChatType === 'private');
+    
+    let userAvatar, charAvatar, userName, charName, charRemark;
+
+    if (isPrivate) {
+        userAvatar = char.myAvatar || 'https://i.postimg.cc/Y96LPskq/o-o-2.jpg';
+        charAvatar = char.avatar || 'https://i.postimg.cc/Y96LPskq/o-o-2.jpg';
+        userName = char.myName || 'User';
+        charName = char.name || 'Character';
+        charRemark = char.remarkName || charName;
+    } else {
+        // 群聊逻辑
+        userAvatar = (char.me && char.me.avatar) ? char.me.avatar : 'https://i.postimg.cc/Y96LPskq/o-o-2.jpg';
+        charAvatar = char.avatar || 'https://i.postimg.cc/Y96LPskq/o-o-2.jpg'; // 群头像
+        userName = (char.me && char.me.nickname) ? char.me.nickname : 'User';
+        charName = char.name || 'Group';
+        charRemark = charName;
+    }
+
+    // 简单变量替换
+    processed = processed.replace(/{{user_avatar}}/g, userAvatar);
+    processed = processed.replace(/{{char_avatar}}/g, charAvatar);
+    processed = processed.replace(/{{user_name}}/g, userName);
+    processed = processed.replace(/{{char_name}}/g, charName);
+    processed = processed.replace(/{{char_remark}}/g, charRemark);
+    processed = processed.replace(/{{user_remark}}/g, userName); // user_remark 等同于 user_name
+
+    // 标签替换 (支持可选的 style 和 class 属性)
+    // <user-avatar class="..." style="..."> -> <img src="..." class="uwu-user-avatar ..." style="...">
+    processed = processed.replace(/<user-avatar([^>]*)>\s*(?:<\/user-avatar>)?/gi, (match, attrs) => {
+        return `<img src="${userAvatar}" class="uwu-user-avatar" ${attrs}>`;
+    });
+
+    processed = processed.replace(/<char-avatar([^>]*)>\s*(?:<\/char-avatar>)?/gi, (match, attrs) => {
+        return `<img src="${charAvatar}" class="uwu-char-avatar" ${attrs}>`;
+    });
+
+    return processed;
+}
+
+// 解析混合内容 (文本+HTML)
+function getMixedContent(responseData) {
+    const results = [];
+    let i = 0;
+
+    while (i < responseData.length) {
+        const nextTagStart = responseData.indexOf('<', i);
+        const nextBracketStart = responseData.indexOf('[', i);
+
+        let firstSpecialIndex = -1;
+        if (nextTagStart !== -1 && nextBracketStart !== -1) {
+            firstSpecialIndex = Math.min(nextTagStart, nextBracketStart);
+        } else {
+            firstSpecialIndex = Math.max(nextTagStart, nextBracketStart);
+        }
+
+        if (firstSpecialIndex === -1) {
+            const text = responseData.substring(i).trim();
+            if (text) results.push({ type: 'text', content: `[unknown的消息：${text}]` });
+            break;
+        }
+
+        if (firstSpecialIndex > i) {
+            const text = responseData.substring(i, firstSpecialIndex).trim();
+            if (text) results.push({ type: 'text', content: `[unknown的消息：${text}]` });
+        }
+
+        i = firstSpecialIndex;
+
+        if (responseData[i] === '<') {
+            const tagMatch = responseData.substring(i).match(/^<([a-zA-Z0-9]+)/);
+            if (tagMatch) {
+                const tagName = tagMatch[1];
+                let openCount = 0;
+                let searchIndex = i;
+                let blockEnd = -1;
+
+                while (searchIndex < responseData.length) {
+                    const openTagPos = responseData.indexOf('<' + tagName, searchIndex);
+                    const closeTagPos = responseData.indexOf('</' + tagName, searchIndex);
+
+                    if (openTagPos !== -1 && (closeTagPos === -1 || openTagPos < closeTagPos)) {
+                        openCount++;
+                        searchIndex = openTagPos + 1;
+                    } else if (closeTagPos !== -1) {
+                        openCount--;
+                        searchIndex = closeTagPos + 1;
+                        if (openCount === 0) {
+                            blockEnd = closeTagPos + `</${tagName}>`.length;
+                            break;
+                        }
+                    } else {
+                        break; 
+                    }
+                }
+
+                if (blockEnd !== -1) {
+                    const htmlBlock = responseData.substring(i, blockEnd);
+                    const charMatch = htmlBlock.match(/<[a-z][a-z0-9]*\s+char="([^"]*)"/i);
+                    const char = charMatch ? charMatch[1] : null;
+                    results.push({ type: 'html', char: char, content: htmlBlock });
+                    i = blockEnd;
+                    continue;
+                }
+            }
+        }
+        
+        if (responseData[i] === '[') {
+            const endBracket = responseData.indexOf(']', i);
+            if (endBracket !== -1) {
+                let text = responseData.substring(i, endBracket + 1);
+                
+                // --- 兼容：在渲染时过滤掉表情包的 (画面:xxx) 后缀 ---
+                const stickerRegex = /^\[(?:.*?的)?表情包：(.+?)\]$/i;
+                const match = text.match(stickerRegex);
+                if (match) {
+                    let stickerName = match[1];
+                    const descIndex = stickerName.indexOf('(画面:');
+                    if (descIndex !== -1) stickerName = stickerName.substring(0, descIndex).trim();
+                    const descIndex2 = stickerName.indexOf('（画面:');
+                    if (descIndex2 !== -1) stickerName = stickerName.substring(0, descIndex2).trim();
+                    const descIndex3 = stickerName.indexOf('（画面：');
+                    if (descIndex3 !== -1) stickerName = stickerName.substring(0, descIndex3).trim();
+                    const descIndex4 = stickerName.indexOf('(画面：');
+                    if (descIndex4 !== -1) stickerName = stickerName.substring(0, descIndex4).trim();
+                    
+                    // 重新拼装备用于前端渲染的纯净文本
+                    text = text.replace(match[1], stickerName);
+                }
+                
+                results.push({ type: 'text', content: text });
+                i = endBracket + 1;
+                continue;
+            }
+        }
+
+        const nextSpecial1 = responseData.indexOf('<', i + 1);
+        const nextSpecial2 = responseData.indexOf('[', i + 1);
+        let endOfText = -1;
+        if (nextSpecial1 !== -1 && nextSpecial2 !== -1) {
+            endOfText = Math.min(nextSpecial1, nextSpecial2);
+        } else {
+            endOfText = Math.max(nextSpecial1, nextSpecial2);
+        }
+        if (endOfText === -1) {
+            endOfText = responseData.length;
+        }
+        const text = responseData.substring(i, endOfText).trim();
+        if (text) results.push({ type: 'text', content: `[unknown的消息：${text}]` });
+        i = endOfText;
+    }
+    return results;
+}
+
+// 过滤聊天记录用于 AI 上下文 (包含状态栏剔除和双语格式化)
+function filterHistoryForAI(chat, historySlice, ignoreContextDisabled = false) {
+    // 1. 基础过滤：深度克隆并过滤掉被屏蔽上下文的消息
+    let filteredHistory = JSON.parse(JSON.stringify(historySlice || chat.history));
+    if (!ignoreContextDisabled) {
+        filteredHistory = filteredHistory.filter(m => !m.isContextDisabled);
+    }
+
+    // 头像操作消息：转换为 system 格式供 AI 理解
+    filteredHistory.forEach(msg => {
+        if (msg.isAvatarAction && msg.content) {
+            const actionMatch = msg.content.match(/^\[avatar-action:([\s\S]+?)\]$/);
+            if (actionMatch) {
+                msg.content = `[system: 头像操作记录 - ${actionMatch[1]}]`;
+            }
+        }
+    });
+
+    // 【三重保险】强制清洗所有消息内容中的 <thinking> 标签块
+    // 防止思维链内容意外混入普通消息中
+    filteredHistory.forEach(msg => {
+        if (msg.content && typeof msg.content === 'string') {
+            msg.content = msg.content.replace(/<thinking>[\s\S]*?<\/thinking>/g, '').trim();
+        }
+        if (msg.parts && Array.isArray(msg.parts)) {
+            msg.parts.forEach(p => {
+                if (p.type === 'text' && p.text) {
+                    p.text = p.text.replace(/<thinking>[\s\S]*?<\/thinking>/g, '').trim();
+                }
+            });
+        }
+    });
+
+    // 2. 双语模式格式标准化
+    if (chat.bilingualModeEnabled) {
+        filteredHistory.forEach(msg => {
+            if (msg.role === 'assistant') {
+                if (msg.content) {
+                    msg.content = msg.content.replace(/[\s\n]*[\(（]([^\)）]+)[\)）]([\s\n]*\])$/, '「$1」$2');
+                    msg.content = msg.content.replace(/[\s\n]*[\(（]([^\)）]+)[\)）]$/, '「$1」');
+                }
+                if (msg.parts && Array.isArray(msg.parts)) {
+                    msg.parts.forEach(p => {
+                        if (p.type === 'text' && p.text) {
+                            p.text = p.text.replace(/[\s\n]*[\(（]([^\)）]+)[\)）]([\s\n]*\])$/, '「$1」$2');
+                            p.text = p.text.replace(/[\s\n]*[\(（]([^\)）]+)[\)）]$/, '「$1」');
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    // 3. 状态栏移除逻辑
+    if (chat.statusPanel && chat.statusPanel.enabled && chat.statusPanel.regexPattern) {
+        const currentRegexStr = chat.statusPanel.regexPattern;
+        const limit = chat.statusPanel.historyLimit !== undefined ? chat.statusPanel.historyLimit : 3;
+        const validityDepth = 50;
+        let statusCount = 0;
+        const totalSliceLength = filteredHistory.length;
+
+        let currentRegexParsed = currentRegexStr;
+        const regexMatch = currentRegexStr.match(/^\/(.*?)\/([a-z]*)$/);
+        if (regexMatch) {
+            currentRegexParsed = regexMatch[1];
+        }
+
+        // 3.1 预处理
+        filteredHistory = filteredHistory.filter((msg, index) => {
+            if (msg.isStatusUpdate) {
+                const depth = totalSliceLength - 1 - index;
+                if (depth >= validityDepth) return false;
+                if (!msg.statusSnapshot) return false;
+                if (msg.statusSnapshot.regex !== currentRegexParsed) return false;
+                return true;
+            }
+            return true;
+        });
+
+        // 3.2 遍历处理
+        for (let i = filteredHistory.length - 1; i >= 0; i--) {
+            const msg = filteredHistory[i];
+            const currentDepth = filteredHistory.length - 1 - i;
+            
+            if (msg.isStatusUpdate) {
+                if (statusCount < limit) {
+                    statusCount++;
+                } else {
+                    msg.content = '';
+                    msg.parts = [];
+                }
+                continue;
+            }
+
+            let pattern = chat.statusPanel.regexPattern;
+            let flags = 'gs';
+            const matchParts = pattern.match(/^\/(.*?)\/([a-z]*)$/);
+            if (matchParts) {
+                pattern = matchParts[1];
+                flags = matchParts[2] || 'gs';
+                if (!flags.includes('g')) flags += 'g';
+                if (!flags.includes('s')) flags += 's';
+            }
+            let regex;
+            try {
+                regex = new RegExp(pattern, flags);
+            } catch (e) {
+                console.error("Invalid regex in status panel settings:", e);
+                continue;
+            }
+
+            if (msg.role === 'assistant') {
+                const originalContent = msg.content || '';
+                const newContent = originalContent.replace(regex, '').trim();
+                const contentHasMatch = (newContent !== originalContent);
+
+                let partsHasMatch = false;
+                let newParts = undefined;
+                
+                if (msg.parts && Array.isArray(msg.parts)) {
+                    newParts = msg.parts.map(p => {
+                        if (p.type === 'text') {
+                            try {
+                                const partRegex = new RegExp(pattern, flags);
+                                const newText = p.text.replace(partRegex, '').trim();
+                                if (newText !== p.text) partsHasMatch = true;
+                                return { ...p, text: newText };
+                            } catch (e) {
+                                return p;
+                            }
+                        }
+                        return p;
+                    }).filter(p => {
+                        if (p.type === 'text') return p.text !== '';
+                        return true;
+                    });
+                }
+
+                if (contentHasMatch || partsHasMatch) {
+                    if (currentDepth < validityDepth && statusCount < limit) {
+                        statusCount++;
+                    } else {
+                        if (contentHasMatch) msg.content = newContent;
+                        if (partsHasMatch && newParts) msg.parts = newParts;
+                        if (!msg.content && (!msg.parts || msg.parts.length === 0)) {
+                            msg.content = '';
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3.3 最终过滤
+        filteredHistory = filteredHistory.filter(msg => {
+            const hasContent = msg.content && msg.content.trim() !== '';
+            const hasParts = msg.parts && msg.parts.length > 0;
+            return hasContent || hasParts;
+        });
+    }
+
+    // 4. 小剧场分享占位符展开为真实内容（仅供 AI 上下文使用）
+    try {
+        const theaterShareRegex = /^\[小剧场分享[：:](.+?)\]$/;
+        if (typeof db !== 'undefined' && db) {
+            filteredHistory.forEach(msg => {
+                if (!msg || !msg.content || typeof msg.content !== 'string') return;
+                const match = msg.content.match(theaterShareRegex);
+                if (!match) return;
+                const scenarioId = match[1];
+                let scenario = null;
+                if (Array.isArray(db.theaterScenarios)) {
+                    scenario = db.theaterScenarios.find(s => s.id === scenarioId);
+                }
+                if (!scenario && Array.isArray(db.theaterHtmlScenarios)) {
+                    scenario = db.theaterHtmlScenarios.find(s => s.id === scenarioId);
+                }
+                if (!scenario) return;
+
+                let charName = '';
+                if (scenario.charId && Array.isArray(db.characters)) {
+                    const ch = db.characters.find(c => c.id === scenario.charId);
+                    if (ch) charName = ch.remarkName || ch.realName || '';
+                }
+
+                const lines = [];
+                lines.push('【小剧场分享】');
+                lines.push(`标题：${scenario.title || '剧情'}`);
+                lines.push(`分类：${scenario.category || '未分类'}`);
+                if (charName) {
+                    lines.push(`角色：${charName}`);
+                }
+                lines.push('');
+                lines.push(scenario.content || '');
+
+                msg.content = lines.join('\n');
+            });
+        }
+    } catch (e) {
+        console.error('展开小剧场分享内容到 AI 上下文时出错:', e);
+    }
+
+    return filteredHistory;
+}
+
+function aiMessageContentToText(content) {
+    if (typeof content === 'string') return content;
+    if (Array.isArray(content)) {
+        return content.map(part => {
+            if (!part) return '';
+            if (part.type === 'text' || part.type === 'html') return part.text || part.content || '';
+            if (part.type === 'image_url' || part.type === 'image') return '[图片]';
+            return '';
+        }).filter(Boolean).join('\n');
+    }
+    if (content == null) return '';
+    return String(content);
+}
+
+function wrapSystemMessageForCompat(content) {
+    const text = aiMessageContentToText(content).trim();
+    return text ? `[System Instruction]\n${text}` : '[System Instruction]';
+}
+
+function mergeAdjacentCompatMessages(messages) {
+    const merged = [];
+    messages.forEach(msg => {
+        if (!msg) return;
+        const prev = merged[merged.length - 1];
+        const canMerge = prev &&
+            prev.role === msg.role &&
+            typeof prev.content === 'string' &&
+            typeof msg.content === 'string';
+        if (canMerge) {
+            prev.content += `\n\n${msg.content}`;
+        } else {
+            merged.push({ ...msg });
+        }
+    });
+    return merged;
+}
+
+function normalizeMessagesForProvider(messages, provider) {
+    const list = Array.isArray(messages) ? messages : [];
+    const mapped = list.map(msg => {
+        if (!msg) return null;
+        const originalRole = msg.role === 'char' ? 'assistant' : msg.role;
+        let nextRole = originalRole;
+        let nextContent = msg.content;
+
+        if (provider === 'claude') {
+            if (originalRole === 'assistant' || originalRole === 'user') {
+                nextRole = originalRole;
+            } else if (originalRole === 'system') {
+                nextRole = 'user';
+                nextContent = wrapSystemMessageForCompat(msg.content);
+            } else {
+                nextRole = 'user';
+            }
+        }
+
+        return {
+            ...msg,
+            role: nextRole,
+            content: nextContent
+        };
+    }).filter(Boolean);
+
+    return provider === 'claude' ? mergeAdjacentCompatMessages(mapped) : mapped;
+}
+
+// 通用 AI 响应获取函数 (支持流式和非流式自动切换)
+async function fetchAiResponse(settings, requestBody, headers, endpoint, forceStream = false) {
+    const { provider } = settings;
+    const streamEnabled = forceStream || settings.streamEnabled;
+
+    if (requestBody && Array.isArray(requestBody.messages)) {
+        requestBody = {
+            ...requestBody,
+            messages: normalizeMessagesForProvider(requestBody.messages, provider)
+        };
+    }
+
+    // 1. 针对流式传输调整 Request Body 和 Endpoint
+    if (streamEnabled) {
+        if (provider === 'gemini') {
+            if (endpoint.includes(':generateContent')) {
+                endpoint = endpoint.replace(':generateContent', ':streamGenerateContent');
+            }
+        } else {
+            requestBody.stream = true;
+        }
+    }
+
+    // 2. 发送请求
+    const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        const error = new Error(`API Error: ${response.status} ${errorText}`);
+        error.response = response;
+        throw error;
+    }
+
+    // 3. 处理响应
+    // 优先检查响应头是否指示流式，或者我们是否显式请求了流式
+    const contentType = response.headers.get('content-type') || '';
+    const isStreamResponse = streamEnabled || contentType.includes('text/event-stream');
+
+    if (isStreamResponse) {
+        return await readStreamResponse(response, provider);
+    } else {
+        // 普通 JSON 响应 (带容错处理)
+        const text = await response.text();
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            // JSON 解析失败。检查是否是 SSE 格式的文本 (针对未设置 header 的流式响应)
+            if (text.includes('data: ')) {
+                console.warn("Received SSE response without header, parsing as text...");
+                let fallbackContent = "";
+                const lines = text.split('\n');
+                for (const line of lines) {
+                    if (line.startsWith('data: ') && !line.includes('[DONE]')) {
+                        try {
+                            const json = JSON.parse(line.substring(6));
+                            fallbackContent += json.choices[0].delta?.content || "";
+                        } catch (e2) {}
+                    }
+                }
+                if (fallbackContent) return fallbackContent;
+            }
+            throw new Error(`Failed to parse JSON response: ${text.substring(0, 100)}...`);
+        }
+
+        if (provider === 'gemini') {
+            return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        } else {
+            return data.choices[0].message.content;
+        }
+    }
+}
+
+async function readStreamResponse(response, provider) {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let fullResponse = "";
+    let accumulatedChunk = "";
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        accumulatedChunk += decoder.decode(value, { stream: true });
+
+        if (provider !== 'gemini') {
+            // OpenAI / Standard SSE logic
+            const parts = accumulatedChunk.split("\n\n");
+            accumulatedChunk = parts.pop();
+            for (const part of parts) {
+                if (part.startsWith("data: ")) {
+                    const data = part.substring(6);
+                    if (data.trim() !== "[DONE]") {
+                        try {
+                            const json = JSON.parse(data);
+                            fullResponse += json.choices[0].delta?.content || "";
+                        } catch (e) {}
+                    }
+                }
+            }
+        }
+    }
+
+    // Handle remaining chunk for OpenAI
+    if (provider !== 'gemini' && accumulatedChunk && accumulatedChunk.trim().length > 0) {
+         if (accumulatedChunk.startsWith("data: ")) {
+             const data = accumulatedChunk.substring(6);
+             if (data.trim() !== "[DONE]") {
+                 try {
+                     const json = JSON.parse(data);
+                     fullResponse += json.choices[0].delta?.content || "";
+                 } catch (e) {}
+             }
+         }
+    }
+
+    // Gemini logic (accumulate all and parse at the end)
+    if (provider === 'gemini') {
+        try {
+            // 尝试解析为 JSON 数组
+            const parsedStream = JSON.parse(accumulatedChunk);
+            if (Array.isArray(parsedStream)) {
+                fullResponse = parsedStream.map(item => item.candidates?.[0]?.content?.parts?.[0]?.text || "").join('');
+            }
+        } catch (e) {
+            console.error("Gemini stream parsing failed", e);
+        }
+    }
+
+    return fullResponse;
+}
+
+// --- 图片查看器 ---
+function openImageViewer(src) {
+    const modal = document.getElementById('full-image-modal');
+    const img = document.getElementById('full-image-view');
+    const closeBtn = document.getElementById('close-full-image-btn');
+    
+    if (!modal || !img) return;
+    
+    img.src = src;
+    modal.classList.add('visible');
+    
+    // 简单的关闭逻辑
+    const closeModal = () => {
+        modal.classList.remove('visible');
+        setTimeout(() => { img.src = ''; }, 300); // 动画结束后清空
+    };
+    
+    if (closeBtn) closeBtn.onclick = closeModal;
+    modal.onclick = (e) => {
+        if (e.target === modal || e.target.closest('.modal-window')) {
+            // 点击图片本身不关闭，点击背景关闭
+            if (e.target !== img) {
+                closeModal();
+            }
+        }
+    };
+}
+
+// === NovelAI 生图 API ===
+
+// Blob 转 DataURL 辅助函数
+function _nai_blobToDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
+// 从 ZIP Blob 中提取图片，返回 DataURL
+async function _nai_extractPngFromZipBlob(zipBlob) {
+    const arrayBuffer = await zipBlob.arrayBuffer();
+    const uint8 = new Uint8Array(arrayBuffer);
+
+    // 在 zip 字节流中定位 PNG 签名 (89 50 4E 47)
+    let pngStart = -1;
+    for (let i = 0; i < uint8.length - 8; i++) {
+        if (uint8[i] === 0x89 && uint8[i+1] === 0x50 && uint8[i+2] === 0x4E && uint8[i+3] === 0x47) {
+            pngStart = i;
+            break;
+        }
+    }
+
+    if (pngStart >= 0) {
+        // 找到 PNG IEND 标记来精确截取
+        let pngEnd = uint8.length;
+        for (let i = pngStart + 8; i < uint8.length - 8; i++) {
+            // IEND chunk: 49 45 4E 44
+            if (uint8[i] === 0x49 && uint8[i+1] === 0x45 && uint8[i+2] === 0x4E && uint8[i+3] === 0x44) {
+                pngEnd = i + 8; // IEND(4) + CRC(4)
+                break;
+            }
+        }
+        const pngBlob = new Blob([uint8.slice(pngStart, pngEnd)], { type: 'image/png' });
+        return await _nai_blobToDataUrl(pngBlob);
+    }
+
+    // 没找到 PNG，尝试找 JPEG 签名 (FF D8 FF)
+    for (let i = 0; i < uint8.length - 3; i++) {
+        if (uint8[i] === 0xFF && uint8[i+1] === 0xD8 && uint8[i+2] === 0xFF) {
+            const jpgBlob = new Blob([uint8.slice(i)], { type: 'image/jpeg' });
+            return await _nai_blobToDataUrl(jpgBlob);
+        }
+    }
+
+    // 都找不到，直接当整个文件转
+    return await _nai_blobToDataUrl(zipBlob);
+}
+
+// 从 base64 字符串解析为图片 DataURL
+function _nai_resolveBase64Image(b64) {
+    if (!b64) return null;
+    if (b64.startsWith('http')) return b64;
+    if (b64.startsWith('data:image')) return b64;
+    if (b64.startsWith('iVBOR')) return `data:image/png;base64,${b64}`;
+    if (b64.startsWith('/9j/')) return `data:image/jpeg;base64,${b64}`;
+    return `data:image/png;base64,${b64}`;
+}
+
+/**
+ * 调用 NovelAI 图像生成 API
+ * @param {string} prompt - 正面提示词 (英文 tag)
+ * @param {object} [overrideSettings] - 可选，覆盖 db.novelAiSettings 的参数
+ * @returns {Promise<{imageUrl: string}>} - 返回图片 DataURL
+ */
+async function generateNovelAiImage(prompt, overrideSettings = {}) {
+    const settings = Object.assign({}, db.novelAiSettings || {}, overrideSettings);
+    const token = settings.token;
+    if (!token) throw new Error('NovelAI Token 未配置');
+    if (!prompt || !prompt.trim()) throw new Error('提示词不能为空');
+
+    // 清理 Token 中可能的特殊字符
+    const cleanToken = token.trim().replace(/[^\x20-\x7E]/g, '');
+
+    let model = settings.model || 'nai-diffusion-4-curated-preview';
+    const resolution = settings.resolution || '832x1216';
+    const [widthStr, heightStr] = resolution.split('x');
+    const width = parseInt(widthStr) || 832;
+    const height = parseInt(heightStr) || 1216;
+    const sampler = settings.sampler || 'k_euler';
+    const steps = settings.steps || 28;
+    const scale = settings.scale || 5;
+    const systemPrompt = settings.systemPrompt || '';
+    const artistTags = settings.artistTags || '';
+    const negativePrompt = settings.negativePrompt || '';
+
+    // 拼接最终 prompt：系统基础 Prompt + 画师串 + 用户 prompt
+    const promptParts = [];
+    if (systemPrompt) promptParts.push(systemPrompt);
+    if (artistTags) promptParts.push(artistTags);
+    promptParts.push(prompt);
+    const fullPrompt = promptParts.filter(Boolean).join(', ');
+
+    console.log('[NovelAI] 最终 Prompt:', fullPrompt);
+
+    // inpainting 模型不能直接生成，回退到同版本普通模型
+    if (model === 'nai-diffusion-3-inpainting') model = 'nai-diffusion-3';
+
+    // 判断是否为 V4 模型
+    const isV4 = model.includes('nai-diffusion-4');
+    const commonSeed = Math.floor(Math.random() * 9999999999);
+
+    // 根据模型版本构建不同的请求体
+    let requestBody;
+    if (isV4) {
+        requestBody = {
+            input: fullPrompt,
+            model: model,
+            action: 'generate',
+            parameters: {
+                params_version: 3,
+                width, height, scale, sampler, steps,
+                seed: commonSeed,
+                n_samples: 1,
+                ucPreset: 0,
+                qualityToggle: true,
+                autoSmea: false,
+                dynamic_thresholding: false,
+                controlnet_strength: 1,
+                legacy: false,
+                add_original_image: true,
+                cfg_rescale: 0,
+                noise_schedule: 'karras',
+                legacy_v3_extend: false,
+                skip_cfg_above_sigma: null,
+                use_coords: false,
+                legacy_uc: false,
+                normalize_reference_strength_multiple: true,
+                characterPrompts: [],
+                v4_prompt: {
+                    caption: { base_caption: fullPrompt, char_captions: [] },
+                    use_coords: false,
+                    use_order: true
+                },
+                v4_negative_prompt: {
+                    caption: { base_caption: negativePrompt, char_captions: [] },
+                    legacy_uc: false
+                },
+                negative_prompt: negativePrompt,
+                deliberate_euler_ancestral_bug: false,
+                prefer_brownian: true
+            }
+        };
+    } else {
+        // V3 请求格式
+        requestBody = {
+            input: fullPrompt,
+            model: model,
+            action: 'generate',
+            parameters: {
+                width, height, scale, sampler, steps,
+                seed: commonSeed,
+                n_samples: 1,
+                ucPreset: 0,
+                qualityToggle: true,
+                sm: false,
+                sm_dyn: false,
+                dynamic_thresholding: false,
+                controlnet_strength: 1,
+                legacy: false,
+                add_original_image: false,
+                cfg_rescale: 0,
+                noise_schedule: 'native',
+                negative_prompt: negativePrompt
+            }
+        };
+    }
+
+    // V4 使用 stream 端点，V3 使用普通端点
+    const apiUrl = isV4
+        ? 'https://image.novelai.net/ai/generate-image-stream'
+        : 'https://image.novelai.net/ai/generate-image';
+
+    console.log('[NovelAI] 发送生图请求:', { apiUrl, model, isV4, width, height, steps, scale, sampler });
+
+    const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${cleanToken}`
+        },
+        body: JSON.stringify(requestBody)
+    });
+
+    console.log(`[NovelAI] 响应状态: ${response.status}, Content-Type: ${response.headers.get('content-type')}`);
+
+    if (!response.ok) {
+        let errDetail = '';
+        try {
+            const errText = await response.text();
+            try { const errObj = JSON.parse(errText); errDetail = errObj.message || errObj.error || errText.substring(0, 150); }
+            catch (_) { errDetail = errText.substring(0, 150); }
+        } catch (_) {}
+        console.error(`[NovelAI] API 错误 (${response.status}): ${errDetail}`);
+        if (response.status === 401) throw new Error('Token 无效或已过期');
+        if (response.status === 402) throw new Error('Anlas 额度不足');
+        if (response.status === 429) throw new Error('请求过于频繁，请稍后再试');
+        throw new Error(`API 返回错误 (${response.status}): ${errDetail}`);
+    }
+
+    // === 根据响应 Content-Type 选择解析策略 ===
+    const contentType = response.headers.get('content-type') || '';
+    let imageDataUrl = null;
+
+    if (contentType.includes('text/event-stream') || contentType.includes('application/x-ndjson')) {
+        // === V4 SSE 流式响应 ===
+        console.log('[NovelAI] 解析 SSE 流式响应...');
+        const sseText = await response.text();
+        const lines = sseText.trim().split('\n');
+
+        // 从后往前扫描，找到最终的图片数据
+        for (let i = lines.length - 1; i >= 0; i--) {
+            const line = lines[i].trim();
+            if (!line.startsWith('data: ') || line === 'data: [DONE]') continue;
+
+            const payload = line.substring(6);
+            try {
+                const obj = JSON.parse(payload);
+                // 检查是否有 URL 字段
+                if (obj.output && Array.isArray(obj.output) && obj.output[0] && obj.output[0].url) {
+                    imageDataUrl = obj.output[0].url; break;
+                }
+                if (obj.url) { imageDataUrl = obj.url; break; }
+                // 检查 base64 字段
+                const b64 = (obj.event_type === 'final' && obj.image) ? obj.image : (obj.data || obj.image);
+                if (b64) {
+                    imageDataUrl = _nai_resolveBase64Image(b64);
+                    if (!imageDataUrl) {
+                        // 可能是 zip 的 base64，解码后提取
+                        const raw = atob(b64);
+                        const bytes = new Uint8Array(raw.length);
+                        for (let j = 0; j < raw.length; j++) bytes[j] = raw.charCodeAt(j);
+                        imageDataUrl = await _nai_extractPngFromZipBlob(new Blob([bytes]));
+                    }
+                    break;
+                }
+            } catch (e) {
+                // 非 JSON，当成原始 base64 尝试
+                if (payload.length > 100) {
+                    imageDataUrl = _nai_resolveBase64Image(payload);
+                    break;
+                }
+            }
+        }
+
+        if (!imageDataUrl) {
+            console.error('[NovelAI] SSE 响应中未找到图片数据, 前500字符:', sseText.substring(0, 500));
+            throw new Error('SSE 响应中未找到图片数据');
+        }
+
+    } else if (contentType.includes('application/json')) {
+        // === JSON 响应（某些代理会返回 JSON） ===
+        console.log('[NovelAI] 解析 JSON 响应...');
+        const jsonData = await response.json();
+        if (jsonData.output && jsonData.output[0] && jsonData.output[0].url) {
+            imageDataUrl = jsonData.output[0].url;
+        } else if (jsonData.url) {
+            imageDataUrl = jsonData.url;
+        } else {
+            const b64 = jsonData.image || jsonData.data;
+            if (b64) {
+                imageDataUrl = _nai_resolveBase64Image(b64);
+            }
+        }
+        if (!imageDataUrl) {
+            throw new Error('JSON 响应中未找到图片数据');
+        }
+
+    } else {
+        // === 默认当 ZIP / 二进制 Blob 处理（V3 常见）===
+        console.log('[NovelAI] 解析二进制/ZIP 响应...');
+        const blob = await response.blob();
+        if (blob.type && blob.type.startsWith('image/')) {
+            imageDataUrl = await _nai_blobToDataUrl(blob);
+        } else {
+            imageDataUrl = await _nai_extractPngFromZipBlob(blob);
+        }
+    }
+
+    if (!imageDataUrl) {
+        throw new Error('未能从响应中获取图片');
+    }
+
+    console.log('[NovelAI] ✅ 生图成功');
+    return { imageUrl: imageDataUrl };
+}
+
+/**
+ * 使用已保存的 NovelAI 设置生成图片（便捷方法）
+ * @param {string} prompt - 正面提示词
+ * @returns {Promise<{imageUrl: string}>}
+ */
+async function novelAiGenerate(prompt) {
+    if (!db.novelAiSettings || !db.novelAiSettings.enabled) {
+        throw new Error('NovelAI 生图未启用，请在 API 设置中开启');
+    }
+    return generateNovelAiImage(prompt);
+}
+
+// 暴露给全局
+window.openImageViewer = openImageViewer;
+window.getRandomValue = getRandomValue;
+window.pad = pad;
+window.formatTimeGap = formatTimeGap;
+window.getLocalTimeInTimezone = getLocalTimeInTimezone;
+window.filterHistoryForAI = filterHistoryForAI;
+window.showToast = showToast;
+window.playSound = (typeof playSound !== 'undefined') ? playSound : null; // 防止循环依赖
+window.generateNovelAiImage = generateNovelAiImage;
+window.novelAiGenerate = novelAiGenerate;
+window.writeOvoPngMetadata = writeOvoPngMetadata;
+window.readOvoPngMetadata = readOvoPngMetadata;

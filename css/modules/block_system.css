@@ -1,0 +1,40 @@
+/* 角色拉黑用户时输入区覆盖层（不修改输入框，避免跨角色污染） */
+#chat-room-screen { position: relative; }
+.char-blocked-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    min-height: 56px;
+    z-index: 8;
+    background: var(--bg-color, #f5f5f5);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-top: 1px solid rgba(0,0,0,0.06);
+}
+.char-blocked-overlay-hint {
+    margin: 0;
+    font-size: 13px;
+    color: #666;
+}
+.char-blocked-overlay-btns {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.chat-item-blocked-by-char-badge {
+    font-size: 11px;
+    color: #8e6bbf;
+    margin-left: 4px;
+}
+
+/* 仅「导入文档」进入创建时：弹窗限高 + 滚动条 */
+#add-char-modal.import-mode .modal-window {
+    max-height: 70vh;
+    overflow-y: auto;
+}

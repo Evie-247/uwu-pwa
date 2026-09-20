@@ -1,0 +1,36 @@
+UwU 后台主动消息 + iOS Web Push（第一版）
+
+这版已经加入：
+1. GitHub Pages PWA 与后台的角色/最近聊天状态同步。
+2. 后台独立调度，PWA 可以被 iOS 完全挂起。
+3. 沿用角色 autoReply 的 fixed/random 参数作为“下一候选时刻”。
+4. 候选时刻到达后，AI 会二次判断“此刻是否自然地想主动联系”；输出 <NO_MESSAGE> 就不发，并随机延后 15–45 分钟再判断。
+5. 真正产生消息后写入后台 pending_messages，并 Web Push 到 iPhone。
+6. 下次打开 PWA 时自动拉取后台消息，写回原角色 history。
+
+新增网页文件：
+- js/push_backend_config.js
+- js/background_sync.js
+
+修改网页文件：
+- index.html
+- js/db.js
+- js/main.js
+- sw.js
+
+新增后台：
+- background-backend/
+
+目前先不要把任何 API Key 写进网页代码。后台部署完成后，只需要编辑 js/push_backend_config.js。
+
+部署顺序建议：
+A. 先创建 PostgreSQL 数据库。
+B. 部署 background-backend（Node.js）。
+C. 配好环境变量和 VAPID。
+D. 测试 /health。
+E. 修改 push_backend_config.js，开启 enabled。
+F. 再把改好的 OVO 发布到 GitHub Pages。
+G. iPhone 从主屏幕打开 PWA，在原“系统通知”设置中允许通知。
+
+说明：
+当前后台生成器保留角色 persona、用户 persona 和最近聊天上下文，并使用独立后台 AI 配置。原 UwU 的完整 prompt 体系非常庞大（世界书、节点、CoT、状态栏等），这一版没有把整套 chat_ai.js 服务端重写。先把“彻底后台 + 随机判断 + 双向消息同步 + Push”主链路搭通；部署测试通过后，再按你的实际使用把世界书/CoT等上下文逐项同步进去，会更安全，也更容易排错。
